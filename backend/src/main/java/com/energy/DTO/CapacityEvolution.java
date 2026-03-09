@@ -1,19 +1,17 @@
 package com.energy.DTO;
 
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-
+/**
+ * DTO para evolución de capacidad por año.
+ */
 @Data
-@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class AuthResponse {
+public class CapacityEvolution {
 
-    private String token;
-    private String email;
-    private String role;
-
+    private Integer year;
+    private Double averageCapacity;
 }

@@ -8,7 +8,6 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 @SpringBootApplication
 @ComponentScan(basePackages = "com.energy") 
 @EnableJpaRepositories(basePackages = "com.energy.Repository")
-// ERROR COMÚN: Asegúrate de que tus entidades estén en .Model o en .Entity y corrígelo aquí:
 @EntityScan(basePackages = {"com.energy.Model", "com.energy.Entity"}) 
 public class BackendApplication {
 

@@ -3,28 +3,77 @@ package com.energy.Repository;
 import com.energy.Model.EnergyModel;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+
 import java.util.List;
 
 @Repository
 public interface EnergyRepository extends JpaRepository<EnergyModel, Long> {
 
-    // Producción total por tipo de energía
-    @Query("SELECT e.energyType, SUM(e.production) FROM EnergyModel e GROUP BY e.energyType")
-    List<Object[]> getTotalProductionByType();
+    @Query("""
+        SELECT e.energyType, SUM(COALESCE(e.production, 0))
+        FROM EnergyModel e
+        WHERE (:year IS NULL OR e.yearData = :year)
+          AND (:region IS NULL OR LOWER(e.region) LIKE LOWER(CONCAT('%', :region, '%')))
+          AND (:type IS NULL OR UPPER(e.energyType) = UPPER(:type))
+        GROUP BY e.energyType
+        ORDER BY SUM(COALESCE(e.production, 0)) DESC
+    """)
+    List<Object[]> getProductionByFilters(@Param("year") Integer year,
+                                          @Param("region") String region,
+                                          @Param("type") String type);
 
-    //  Top 5 regiones con mayor consumo
-    @Query("SELECT e.region, SUM(e.consumption) FROM EnergyModel e GROUP BY e.region ORDER BY SUM(e.consumption) DESC")
-    List<Object[]> getTopConsumingRegions();
+    @Query("""
+        SELECT e.region, SUM(COALESCE(e.consumption, 0))
+        FROM EnergyModel e
+        WHERE (:year IS NULL OR e.yearData = :year)
+          AND (:type IS NULL OR UPPER(e.energyType) = UPPER(:type))
+        GROUP BY e.region
+        ORDER BY SUM(COALESCE(e.consumption, 0)) DESC
+    """)
+    List<Object[]> getConsumptionByFilters(@Param("year") Integer year,
+                                           @Param("type") String type);
 
-    // Promedio de capacidad por año
-    @Query("SELECT e.yearData, AVG(e.capacity) FROM EnergyModel e GROUP BY e.yearData ORDER BY e.yearData")
-    List<Object[]> getAverageCapacityByYear();
+    @Query("""
+        SELECT e.yearData, AVG(COALESCE(e.capacity, 0))
+        FROM EnergyModel e
+        WHERE (:region IS NULL OR LOWER(e.region) LIKE LOWER(CONCAT('%', :region, '%')))
+          AND (:type IS NULL OR UPPER(e.energyType) = UPPER(:type))
+        GROUP BY e.yearData
+        ORDER BY e.yearData
+    """)
+    List<Object[]> getCapacityEvolutionByFilters(@Param("region") String region,
+                                                 @Param("type") String type);
 
-    // Relación producción vs consumo por región
-    @Query("SELECT e.region, SUM(e.production), SUM(e.consumption) FROM EnergyModel e GROUP BY e.region")
-    List<Object[]> getProductionVsConsumption();
+    @Query("""
+        SELECT e.region, SUM(COALESCE(e.production, 0)), SUM(COALESCE(e.consumption, 0))
+        FROM EnergyModel e
+        WHERE (:year IS NULL OR e.yearData = :year)
+          AND (:type IS NULL OR UPPER(e.energyType) = UPPER(:type))
+        GROUP BY e.region
+        ORDER BY e.region
+    """)
+    List<Object[]> getRegionalCompareByFilters(@Param("year") Integer year,
+                                               @Param("type") String type);
 
-    // Listar datos filtrados por tipo (para las tablas)
+    @Query("""
+        SELECT e
+        FROM EnergyModel e
+        WHERE (:year IS NULL OR e.yearData = :year)
+          AND (:region IS NULL OR LOWER(e.region) LIKE LOWER(CONCAT('%', :region, '%')))
+          AND (:type IS NULL OR UPPER(e.energyType) = UPPER(:type))
+        ORDER BY e.yearData DESC, e.region ASC
+    """)
+    List<EnergyModel> filterData(@Param("year") Integer year,
+                                 @Param("region") String region,
+                                 @Param("type") String type);
+
     List<EnergyModel> findByEnergyType(String type);
+
+    @Query("SELECT DISTINCT e.region FROM EnergyModel e ORDER BY e.region")
+    List<String> getAllRegions();
+
+    @Query("SELECT DISTINCT e.yearData FROM EnergyModel e ORDER BY e.yearData")
+    List<Integer> getAllYears();
 }
