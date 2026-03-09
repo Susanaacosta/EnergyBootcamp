@@ -3,24 +3,28 @@ package com.energy.Repository;
 import com.energy.Model.EnergyModel;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import java.util.List;
-import java.util.Optional;
 
 @Repository
 public interface EnergyRepository extends JpaRepository<EnergyModel, Long> {
 
-    // Cambie 'findByEntityAndDataYear' por este para que no de error de nombres
-    Optional<EnergyModel> findByEntityAndDataYear(String entity, Integer dataYear);
+    // Producción total por tipo de energía
+    @Query("SELECT e.energyType, SUM(e.production) FROM EnergyModel e GROUP BY e.energyType")
+    List<Object[]> getTotalProductionByType();
 
-    // Los Querys manuales usan los nombres de las variables de tu clase
-    @Query("SELECT SUM(e.hydroTwh), SUM(e.solarTwh), SUM(e.windTwh) FROM EnergyModel e WHERE e.dataYear = :year")
-    List<Object[]> findGlobalProductionByYear(@Param("year") Integer year);
+    //  Top 5 regiones con mayor consumo
+    @Query("SELECT e.region, SUM(e.consumption) FROM EnergyModel e GROUP BY e.region ORDER BY SUM(e.consumption) DESC")
+    List<Object[]> getTopConsumingRegions();
 
-    @Query("SELECT e.entity, e.windTwh FROM EnergyModel e WHERE e.dataYear = :year AND e.code IS NOT NULL ORDER BY e.windTwh DESC")
-    List<Object[]> findTop10WindProduction(@Param("year") Integer year);
+    // Promedio de capacidad por año
+    @Query("SELECT e.yearData, AVG(e.capacity) FROM EnergyModel e GROUP BY e.yearData ORDER BY e.yearData")
+    List<Object[]> getAverageCapacityByYear();
 
-    @Query("SELECT e.dataYear, e.solarCapacityGw FROM EnergyModel e WHERE e.entity = :country ORDER BY e.dataYear ASC")
-    List<Object[]> findSolarCapacityTrend(@Param("country") String country);
+    // Relación producción vs consumo por región
+    @Query("SELECT e.region, SUM(e.production), SUM(e.consumption) FROM EnergyModel e GROUP BY e.region")
+    List<Object[]> getProductionVsConsumption();
+
+    // Listar datos filtrados por tipo (para las tablas)
+    List<EnergyModel> findByEnergyType(String type);
 }

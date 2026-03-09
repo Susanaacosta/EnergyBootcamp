@@ -1,38 +1,56 @@
 package com.energy.Model;
 
-import io.swagger.v3.oas.annotations.media.Schema;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.NoArgsConstructor;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
 
+import java.util.Collection;
+import java.util.List;
+//
 @Entity
 @Table(name = "users")
 @Data
-@NoArgsConstructor
-@AllArgsConstructor
-@Schema(description = "Modelo de usuario para el sistema de gestión de energía")
-public class UserModel {
+public class UserModel implements UserDetails {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Schema(accessMode = Schema.AccessMode.READ_ONLY)
     private Long id;
 
-    @Column(unique = true, nullable = false)
-    @Schema(example = "admin@energy.com", description = "Email único que servirá como username")
+    @Column(unique = true)
     private String email;
 
-    @Column(nullable = false)
-    @Schema(description = "Contraseña encriptada")
     private String password;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    @Schema(example = "ADMIN", description = "Roles: ADMIN, USER, ANALYST")
-    private Role role;
+    private String role; // ADMIN, USER
 
-    public enum Role {
-        ADMIN, USER, ANALYST
+    private boolean enabled = true;
+
+    // --- Métodos de Spring Security 
+
+    @Override
+    @JsonIgnore
+    public Collection<? extends GrantedAuthority> getAuthorities() {
+        return List.of(new SimpleGrantedAuthority(role));
     }
+
+    @Override
+    @JsonIgnore
+    public String getUsername() {
+        return email;
+    }
+
+    @Override
+    public boolean isAccountNonExpired() { return true; }
+
+    @Override
+    public boolean isAccountNonLocked() { return true; }
+
+    @Override
+    public boolean isCredentialsNonExpired() { return true; }
+
+    @Override
+    public boolean isEnabled() { return enabled; }
 }

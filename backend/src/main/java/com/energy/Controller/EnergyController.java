@@ -1,69 +1,47 @@
 package com.energy.Controller;
 
-import com.energy.Model.EnergyModel;
-import com.energy.Repository.EnergyRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.energy.Service.EnergyService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Optional;
-
+//Creacion de las apis de los querys para acceder a su data
 @RestController
 @RequestMapping("/api/energy")
-@CrossOrigin(origins = "*") // Pa que el Frontend no sea bloqueado por seguridad
+@RequiredArgsConstructor
+@CrossOrigin(origins = "*")
 public class EnergyController {
 
-    @Autowired
-    private EnergyRepository energyRepository;
+    private final EnergyService energyService;
 
-    // Obtene absolutamente todo
-    @GetMapping("/all")
-    public List<EnergyModel> getAllEnergyData() {
-        return energyRepository.findAll();
+    // 1. Producción total por tipo de energía
+    @GetMapping("/stats/production-type")
+    public ResponseEntity<List<Object[]>> getProductionByType() {
+        return ResponseEntity.ok(energyService.getProductionByType());
     }
 
-    // Busca por ID específico
-    @GetMapping("/{id}")
-    public ResponseEntity<EnergyModel> getEnergyById(@PathVariable Long id) {
-        Optional<EnergyModel> data = energyRepository.findById(id);
-        return data.map(ResponseEntity::ok)
-                   .orElseGet(() -> ResponseEntity.notFound().build());
+    // 2. Top 5 regiones con mayor consumo
+    @GetMapping("/stats/top-consumption")
+    public ResponseEntity<List<Object[]>> getTopConsumption() {
+        return ResponseEntity.ok(energyService.getTopConsumption());
     }
 
-    /*Producción total de energía renovable por tipo.
-     * Esto le sirve al Front para hacer una gráficas DE TORTA
-     */
-    @GetMapping("/global-stats/{year}")
-    public List<Object[]> getGlobalStats(@PathVariable Integer year) {
-        return energyRepository.findGlobalProductionByYear(year);
+    // 3. Promedio de capacidad por año
+    @GetMapping("/stats/capacity-evolution")
+    public ResponseEntity<List<Object[]>> getCapacityEvolution() {
+        return ResponseEntity.ok(energyService.getCapacityEvolution());
     }
 
-    /**Top 10 países con mayor producción eólica.
-     * Esto le sirve al Front para hacer una gráfica de Barras.
-     */
-    @GetMapping("/top-wind/{year}")
-    public List<Object[]> getTopWind(@PathVariable Integer year) {
-        return energyRepository.findTop10WindProduction(year);
+    // 4. Relación producción vs consumo por región
+    @GetMapping("/stats/regional-compare")
+    public ResponseEntity<List<Object[]>> getRegionalCompare() {
+        return ResponseEntity.ok(energyService.getRegionalCompare());
     }
 
-    /**
-     Tendencia histórica de capacidad solar.
-     * Esto le sirve al Front para hacer una gráfica de Líneas
-     */
-    @GetMapping("/solar-trend/{country}")
-    public List<Object[]> getSolarTrend(@PathVariable String country) {
-        return energyRepository.findSolarCapacityTrend(country);
-    }
-
-    // Busca por País y Año exacto
-    @GetMapping("/search")
-    public ResponseEntity<EnergyModel> getByCountryAndYear(
-            @RequestParam String entity, 
-            @RequestParam Integer year) {
-        
-        return energyRepository.findByEntityAndDataYear(entity, year)
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+    // 5. Listar datos filtrados por tipo (ej. SOLAR, RENEWABLE)
+    @GetMapping("/data/{type}")
+    public ResponseEntity<?> getRawData(@PathVariable String type) {
+        return ResponseEntity.ok(energyService.getDataByType(type));
     }
 }
