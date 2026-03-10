@@ -5,75 +5,44 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
-
 import java.util.List;
 
 @Repository
 public interface EnergyRepository extends JpaRepository<EnergyModel, Long> {
 
-    @Query("""
-        SELECT e.energyType, SUM(COALESCE(e.production, 0))
-        FROM EnergyModel e
-        WHERE (:year IS NULL OR e.yearData = :year)
-          AND (:region IS NULL OR LOWER(e.region) LIKE LOWER(CONCAT('%', :region, '%')))
-          AND (:type IS NULL OR UPPER(e.energyType) = UPPER(:type))
-        GROUP BY e.energyType
-        ORDER BY SUM(COALESCE(e.production, 0)) DESC
-    """)
-    List<Object[]> getProductionByFilters(@Param("year") Integer year,
-                                          @Param("region") String region,
-                                          @Param("type") String type);
+    EnergyModel findByRegionAndYearData(String region, Integer yearData);
 
-    @Query("""
-        SELECT e.region, SUM(COALESCE(e.consumption, 0))
-        FROM EnergyModel e
-        WHERE (:year IS NULL OR e.yearData = :year)
-          AND (:type IS NULL OR UPPER(e.energyType) = UPPER(:type))
-        GROUP BY e.region
-        ORDER BY SUM(COALESCE(e.consumption, 0)) DESC
-    """)
-    List<Object[]> getConsumptionByFilters(@Param("year") Integer year,
-                                           @Param("type") String type);
+    // #1. Producción total de energía renovable por tipo de fuente en un año específico, agrupada por regiones.
+    @Query("SELECT e.region, e.solarTwh, e.windTwh, e.hydroTwh, e.otherRenewablesTwh " +
+           "FROM EnergyModel e WHERE e.yearData = :year " +
+           "AND (e.code IS NULL OR e.code = '' OR LENGTH(e.code) > 3) " + 
+           "AND e.region NOT IN ('World', 'High-income countries', 'Low-income countries', 'Upper-middle-income countries', 'Lower-middle-income countries')")
+    List<Object[]> findProductionBySourceAndYear(@Param("year") int year);
 
-    @Query("""
-        SELECT e.yearData, AVG(COALESCE(e.capacity, 0))
-        FROM EnergyModel e
-        WHERE (:region IS NULL OR LOWER(e.region) LIKE LOWER(CONCAT('%', :region, '%')))
-          AND (:type IS NULL OR UPPER(e.energyType) = UPPER(:type))
-        GROUP BY e.yearData
-        ORDER BY e.yearData
-    """)
-    List<Object[]> getCapacityEvolutionByFilters(@Param("region") String region,
-                                                 @Param("type") String type);
+    // #2. Porcentaje de energía renovable en el consumo eléctrico total de cada región.
+    @Query("SELECT e.region, e.renewablesPercentage FROM EnergyModel e " +
+           "WHERE e.yearData = :year " +
+           "AND (e.code IS NULL OR e.code = '' OR LENGTH(e.code) > 3) " +
+           "AND e.region NOT IN ('World', 'High-income countries', 'Low-income countries') " +
+           "AND e.renewablesPercentage IS NOT NULL")
+    List<Object[]> findRenewablePercentageByYear(@Param("year") int year);
 
-    @Query("""
-        SELECT e.region, SUM(COALESCE(e.production, 0)), SUM(COALESCE(e.consumption, 0))
-        FROM EnergyModel e
-        WHERE (:year IS NULL OR e.yearData = :year)
-          AND (:type IS NULL OR UPPER(e.energyType) = UPPER(:type))
-        GROUP BY e.region
-        ORDER BY e.region
-    """)
-    List<Object[]> getRegionalCompareByFilters(@Param("year") Integer year,
-                                               @Param("type") String type);
+    // #3. Tendencia de la capacidad instalada de energía solar a lo largo de los años.
+    @Query("SELECT e.yearData, e.solarCapacity FROM EnergyModel e " +
+           "WHERE e.region = 'World' AND e.solarCapacity IS NOT NULL " +
+           "ORDER BY e.yearData ASC")
+    List<Object[]> findGlobalSolarTrend();
 
-    @Query("""
-        SELECT e
-        FROM EnergyModel e
-        WHERE (:year IS NULL OR e.yearData = :year)
-          AND (:region IS NULL OR LOWER(e.region) LIKE LOWER(CONCAT('%', :region, '%')))
-          AND (:type IS NULL OR UPPER(e.energyType) = UPPER(:type))
-        ORDER BY e.yearData DESC, e.region ASC
-    """)
-    List<EnergyModel> filterData(@Param("year") Integer year,
-                                 @Param("region") String region,
-                                 @Param("type") String type);
+    // #4. Los 10 países con mayor producción de energía eólica en un año específico.
+    @Query(value = "SELECT region, wind_twh FROM energy_data " +
+                   "WHERE year_data = :year AND LENGTH(code) = 3 " +
+                   "AND wind_twh IS NOT NULL " +
+                   "ORDER BY wind_twh DESC LIMIT 10", nativeQuery = true)
+    List<Object[]> findTop10WindByYear(@Param("year") int year);
 
-    List<EnergyModel> findByEnergyType(String type);
-
-    @Query("SELECT DISTINCT e.region FROM EnergyModel e ORDER BY e.region")
-    List<String> getAllRegions();
-
-    @Query("SELECT DISTINCT e.yearData FROM EnergyModel e ORDER BY e.yearData")
-    List<Integer> getAllYears();
+    // #5. Fuentes de energía y su participación en el consumo eléctrico total a nivel global.
+    @Query("SELECT SUM(e.solarTwh), SUM(e.windTwh), SUM(e.hydroTwh), SUM(e.otherRenewablesTwh) " +
+           "FROM EnergyModel e WHERE e.yearData = :year AND LENGTH(e.code) = 3")
+    List<Object[]> findGlobalParticipationByYear(@Param("year") int year);
 }
+

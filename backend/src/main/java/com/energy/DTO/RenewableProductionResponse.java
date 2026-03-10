@@ -4,15 +4,11 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-/**
- * DTO para comparar producción vs consumo por región.
- */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class RegionalCompare {
-
+public class RenewableProductionResponse {
     private String region;
-    private Double production;
-    private Double consumption;
+    private String energyType;
+    private Double totalProduction;
 }
